@@ -1,0 +1,172 @@
+@Kyohei Osawa 
+from flask import Flask, request
+from pymongo import *
+​
+PRICE = 0
+​
+#ckeckstock
+def mongod_read(name):
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+​
+    collection = client["a3"]["debug"]
+​
+    find =  collection.find(projection={'_id':0},sort=[('_id',-1)])
+    
+    result = None
+    
+    for doc in find:
+        if name in doc["name"]:
+            name = str(doc["name"])
+            amount = str(doc["amount"])
+            text = name + ": "+amount+"\n"
+    
+    return text
+​
+#ckeckstock
+def mongod_read_non():
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+​
+    collection = client["a3"]["debug"]
+​
+    find =  collection.find(projection={'_id':0},sort=[('_id',-1)])
+    
+    result = ""
+    
+    for doc in find:
+        name = str(doc["name"])
+        amount = str(doc["amount"])
+        text = name + ": "+amount+"\n"
+        result += text
+        
+    return result
+​
+​
+# deleteall
+def delete_all():
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+​
+    collection = client["a3"]["debug"]
+    
+    print("---全データ削除---")
+    collection.drop()
+​
+# sell
+def mongod_sell(name,amount,price):
+    global PRICE
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+    collection = client["a3"]["debug"]
+    beforeAmount = check_bug(name)
+    PRICE += amount * price
+    beforeAmount -= amount
+    print(f"PRICE: {PRICE}")
+    print("----update----")
+    collection.update({"name":name},{"$set":{"amount":beforeAmount}})
+    print(f"name:{name}, amount:{amount}")
+​
+​
+# sell
+def mongod_sell_non(name,amount):
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+    collection = client["a3"]["debug"]
+    beforeAmount = check_bug(name)
+    beforeAmount -= amount
+    print("----update----")
+    collection.update({"name":name},{"$set":{"amount":beforeAmount}})
+    print(f"name:{name}, amount:{amount}")
+​
+# addstock用
+def check_bug(name):
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+​
+    collection = client["a3"]["debug"]
+​
+    find =  collection.find(projection={'_id':0},sort=[('_id',-1)])
+    
+    flag = False
+    amount = 0
+    for doc in find:
+        if name in doc["name"]:
+            amount = int(doc["amount"])
+            flag = True
+    if flag == False:
+        return False
+    else:
+        return amount
+​
+# addstack
+def mongod_write(name,amount):
+    client = MongoClient("mongodb://sirius:sgt945518@localhost:27017/")
+    
+    collection = client["a3"]["debug"]
+    flag  = check_bug(name)
+    if flag != False:
+        print("----update----")
+        amount = flag + amount
+        collection.update({"name":name},{"$set":{"amount":amount}})
+    else:
+        print("----insert----")
+        collection.insert({"name":name,"amount":amount})
+    print(f"name:{name}, amount:{amount}")
+​
+def is_integer_num(n):
+    if isinstance(n, int):
+        return True
+    if isinstance(n, float):
+        return n.is_integer()
+    return False
+​
+app = Flask(__name__)
+​
+@app.route("/stocker")
+def stocker():
+    result = ""
+    qry = request.query_string
+    qry = str(qry.decode('utf-8'))
+    if "name" in qry:
+        qryName = request.args.get("name")
+    if "function" in qry:
+        qryFunction = request.args.get("function")
+        print(qryFunction)
+    if "amount" in qry:
+        qryAmount = request.args.get("amount")
+        if is_integer_num(float(qryAmount)) == False:
+            return "ERROR"
+            
+    if "price" in qry:
+        qryPrice = request.args.get("price")
+    
+    if qryFunction == "addstock":
+        if "amount" not in qry:
+            qryAmount = 1
+        mongod_write(qryName,int(qryAmount))
+    elif qryFunction == "checkstock":
+        if "name" not in qry:
+            result = mongod_read_non()
+        else:
+            result = mongod_read(qryName)
+    elif qryFunction == "deleteall":
+        delete_all()
+    elif qryFunction == "sell":
+        if "amount" not in qry:
+            qryAmount = 1
+        if "price" not in qry:
+            mongod_sell_non(qryName,int(qryAmount))
+        else:
+            mongod_sell(qryName,int(qryAmount),int(qryPrice))
+    elif qryFunction == "checksales":
+        result = "sales: " + str(PRICE)
+    
+    
+    return result
+​
+@app.route("/test")
+def test():
+    qry = request.query_string
+    qry = str(qry.decode("utf-8"))
+    print(f"クエリの種類: {qry}")
+    value = request.args.get("test")
+    print(f"test : {value}")
+    return "unti"
+​
+if __name__ == "__main__":
+    app.run(host="0.0.0.0",port=5000,debug=True)

@@ -1,0 +1,64 @@
+・電池残量取得 他espで対応✅
+・wifiスキャン✅
+・タイマー
+・deploy時にスキャンをループ
+・APmodeをoff✅
+https://qiita.com/Kosuke_Matsui/items/cbb39fd9cd5a120e15fe
+#APmodeに関するもの↑
+
+ESP(L)のessid = ESP_D38A19
+
+apモード停止 = ap.active(False)
+
+@ terminalでesp接続---------------------------------------------------
+ls -l /dev/tty.*
+screen /dev/tty.usbserialxxx 115200
+
+@ socketモジュール-----------------------------------------------------
+host = wifi.ifconfig()[2]
+s = socket.socket() #新しいソケットを作成
+s.connect(socket.getaddrinfo(host, port)[0][-1])
+
+-socket.bind(address)
+ソケットをアドレスにバインドします．バインドずみのソケットを再バインドすることはできない
+
+-socket.listen(backlog)
+サーバーが接続を受け付けるようにする
+backlogは接続可能数
+
+-socket.accept() <-> connect
+接続を受け入れる
+ソケットはアドレスにバインド済みでlistenしている必要がある
+戻り値は(conn,address)
+
+-socket.connect(address) <-> accept
+addressでソケットに接続する
+
+-socket.send()
+ソケットにデータを送信する
+
+-socket.sendall()
+ソケットに全てのデータを送信する
+
+-socket.recv(bufsize)
+ソケットからデータを受信する
+bufsizeで一度に受け取るデータサイズを決定する
+
+-socket.close()
+ソケットを閉じる
+
+サーバー側
+1 ソケット作成
+2 bind
+3 listen
+4 accept
+5 recv
+6 send
+7 close
+
+クライアント側
+1 ソケット作成
+2 connect
+3 send
+4 recv
+5 close
